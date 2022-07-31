@@ -1,16 +1,23 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
+import time
 
 
-# file = "./test.csv"
-# with open(file, mode="w", encoding='utf-8') as w_file:
-# 	file_writer = csv.writer(w_file, delimiter = ";", lineterminator="\r")
-# 	file_writer.writerow(["Seller", "Location", "Price", "Currency", "Rooms", "Area", "Floor"])
+file = "./data.csv"
+with open(file, mode="w", encoding='utf-8') as w_file:
+	file_writer = csv.writer(w_file, lineterminator="\r")
+	file_writer.writerow(["ID", "Seller", "Category", "Locations", "Price", 
+		"Currency", "Rooms", "Area", "Floor"])
 
+
+AZtoEN = [["Ə","A"],["I","I"],["Ğ","G"],["Ö","O"],["Ç","Ch"],["Ş","Sh"],["Ü","U"],["İ","I"],
+	["ə","a"],["ı","i"],["ğ","g"],["ö","o"],["ç","ch"],["ş","sh"],["ü","u"]]
 
 def encoder(text):
-	pass
+	for letter in AZtoEN:
+		text = text.replace(letter[0],letter[1])
+	return text
 
 
 def parseLink(link):
@@ -22,12 +29,17 @@ def parseLink(link):
 
 	params = soup.find('table', class_='parameters')
 	for n, p in params:
-		category = p.text
+		category = encoder(p.text)
 		break
 
-	locations = soup.find('ul', class_='locations')
-	for l in locations:
-		print(l.text)
+	locs = soup.find('ul', class_='locations')
+	locations = []
+	regions = ["r.", "q.", "m."]
+	for l in locs:
+		if (l.text)[-2:] in regions:
+			locations.append(encoder(l.text))
+
+	return category, locations
 
 
 def parser(page):
@@ -39,6 +51,8 @@ def parser(page):
 
 
 	items_Lists = soup.find_all('div', class_='items_list')
+
+	data_list = []
 
 	for items_list in items_Lists:
 		items = items_list.find_all('div', class_='items-i')
@@ -53,11 +67,7 @@ def parser(page):
 			else:
 				product_label = product_label.text
 
-			location = item.find('div', class_="location").text
-			location = location.replace("ə","a").replace("ı","i").replace("ğ","g").replace("ö","o")
-			location = location.replace("ç","ch").replace("ş","sh").replace("ü","u")
-			location = location.replace("Ə","A").replace("I","I").replace("Ğ","G").replace("Ö","O")
-			location = location.replace("Ç","Ch").replace("Ş","Sh").replace("Ü","U").replace("İ","I")
+			# location = item.find('div', class_="location").text
 
 			price = [item.find('span', class_="price-cur").text,
 				int(item.find('span', class_="price-val").text.replace(" ", ""))]
@@ -72,20 +82,34 @@ def parser(page):
 
 			link = item.find('a', class_="item_link")["href"]
 
-			parseLink(link)
-			exit()
+			category, locations = parseLink(link)
 
-			print(product_label, location, price, rooms, area, floor, link)
+			link_id = int(link.split("/")[2])
+
+
+			# print(link_id, product_label, category, locations, price, rooms, area, floor)
 
 			
-			# data = [product_label, location, price[1], price[0], rooms, area, floor]
-			# with open(file, mode="a", encoding='utf-8') as w_file:
-			# 	file_writer = csv.writer(w_file, delimiter = ";", lineterminator="\r")
-			# 	file_writer.writerow(data)
+			data_list.append([link_id, product_label, category, locations, 
+				price[1], price[0], rooms, area, floor])
+
+	with open(file, mode="a", encoding='utf-8') as w_file:
+		file_writer = csv.writer(w_file, lineterminator="\r")
+		for data in data_list:
+			file_writer.writerow(data)
 
 
 
-pages = 1
+start_time = time.time()
 
+
+pages = 3
 for page in range(pages):
+	print('In page:',page+1)
 	parser(page+1)
+
+
+time_min = round((time.time() - start_time) / 60)
+time_sec = round((time.time() - start_time) % 60)
+working_time = f"\nTime spent parsing: {time_min} min {time_sec} sec"
+print(working_time)
