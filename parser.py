@@ -84,7 +84,10 @@ def parser(page):
 
 			category, locations = parseLink(link)
 
-			link_id = int(link.split("/")[2])
+			try:
+				link_id = int(link.split("/")[2])
+			except:
+				link_id = int(link.split("/")[2][:5])
 
 
 			# print(link_id, product_label, category, locations, price, rooms, area, floor)
@@ -103,7 +106,7 @@ def parser(page):
 start_time = time.time()
 
 
-pages = 3
+pages = 1000
 for page in range(pages):
 	print('In page:',page+1)
 	parser(page+1)
